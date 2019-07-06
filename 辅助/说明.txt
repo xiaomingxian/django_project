@@ -1,0 +1,170 @@
+创建超级用户
+python manager.py createsuperuser
+
+
+应用内创建admin.py  进行模型注册
+from django.contrib import admin
+from MyApp.models import Person
+
+# 模型管理类----属性需要与类属性对应
+class PersonAdmin(admin.ModelAdmin):
+    list_display = ['id', 'name', 'age', 'birthday']
+    pass
+
+
+# Register your models here.注册模型  方便管理表---参数中著名管理类
+admin.site.register(Person, PersonAdmin)
+
+
+----------------
+模型类字段类型
+Char..Filed
+Boolen...
+Integer...
+TextF..大文本
+DecimalF...(max_digits=None,decimal_places=None) 十进制浮点数(总数,小数位)    (精度高)
+FloatField     (精度小)
+DateField([auto_now=Flase,auto_now_add=Flase])   这两个属性相互排斥不能同时使用 ([每次保存时时间为当前时间-可用于记录更改时间(更新时间-改变对象属性 )，创建时间])
+TimeF...
+BooleanField
+NullBooleanField     Null True False
+
+FileField  上传文件字段
+ImageField 继承自FileField  对上传的图片进行校验 确保是有效的图片
+
+-------------------------
+属性选项  =True/Flase
+default
+primary_key
+unique    数据只能有一份不能重复
+db_index  索引
+db_cloumn    指定字段名称 (假如字段和属性名称不一致)
+null      默认False    null=True允许为空
+blank     默认False    =True 允许为空白   用于在管理页面 增加值可以不填
+...
+default和blank更改不影响表结构可以不迁移
+----------------------------
+查询  (测试)
+get    只能得到一条模型数据
+all    所有数据
+filter 返回满足条件的数据  返回值:QuerySet  参数写查询条件
+exculde 返回不满足条件的数据  QuerySet    参数写查询条件
+order_by 对查询结果进行排序    QuerySet    参数中写根据哪些字段排序    对所有进行排序时 .all()可以省略
+            eg:类.objects.all().order_by('id','name',...)  默认升序 asc
+         降序eg:类.objects.all().order_by('-id','-name',...)        desc
+
+get/filter/exclude 中的查询条件的格式:属性__条件名=值
+get返回一条数据  filter返回多条数据
+
+exclude eg:查询id不为3的数据  类.objects.exclude(id=3)
+------------------------------------------------
+条件名:
+ =        exact(可以省略 eg:get(id=1)-->get(id__exact=1))
+ 包含      contains
+ 以XX结尾  endswith
+ 以XX开头  startswith
+ 空查询    isnull       不为空 isnull=False
+ 范围      in             id in [1,2,3]
+
+ 比较：> gt   eg:属性__gt=3  --->属性>3
+      < lt
+      __year eg:查询 1980年发表的图书 bookDate__year=1980
+             eg:查询 1980.1.1后发表的图书 bookDate__gt=date(1980.1.1)
+
+----------------- 多条件查询  ------------
+get/filter/exclude
+and not or ---> Q 对象中: & ~ |
+eg: 且 ...(id=1,name='tom')
+
+-------Q对象-------
+逻辑关系
+前提:导入Q
+from django.db.models import Q
+且: ...(id=3,name='tom')  ...(Q(id=3)&Q(name='tom'))
+或: ...(Q(id=3)|Q(name='tom'))
+不等: ...(~Q(id=3))
+
+-------F对象-------
+用于类属性之间的比较
+from django.db.models import F
+eg:阅读量大于评论量  ...(阅读量__gt=F(评论量))
+eg:阅读量大于两倍的评论量  ...(阅读量__gt=F(评论量)*2)    F对象可以进行算数运算
+-----聚合函数----------
+mysql中：sum ,count,avg,max,min
+django中:使用aggregate函数返回的是一个字典值
+
+前提:导入聚合类
+from django.db.models import Sum,Count,Max,Min,Avg
+eg:
+    查询所有图书的数目: 导入Count   类.objects.all()/或者其他查询.aggregate(Count(具体属性写*会报错))--->字典{'属性__count':value}   查询所有可以省略 .all()
+                                                                        Sum(具体属性写*会报错)
+
+Count函数 ： 返回值是数字    查询结果.count()
+
+---------------------- 延迟 与 缓存  --------------------
+查询出来的结果 并不会 立即查询 只有在使用的时候才会查询
+同样的查询语句 只会查询一次 后面的查询冲缓存里 查找
+
+
+------------------ F函数与普通函数比较 -------------------
+eg1:
+    reporter = Reporters.objects.get(name='Tintin')
+    reporter.stories_filed += 1
+    reporter.save()
+
+
+eg2:
+    from django.db.models import F
+    reporter = Reporters.objects.get(name='Tintin')
+    reporter.stories_filed = F('stories_filed') + 1
+    reporter.save()
+
+
+例子1中的写法，应该是比较常见的。它的工作原理是，将对象从数据库中查出来放到内存中，然后计数，再存入到数据库中。
+
+例子2中的工作原理是，，计数后更改数据库。直接在数据库中查出数据
+
+
+
+---------------------表关系 ------------------
+一对一:models.OneToOneField('...')  #随便建在 哪个 表都可以
+多对多:models.ManyToManyField('...')  #随便建在 哪个 表都可以
+
+
+---------------------  关联查询:  ---------------------
+    one = One.objects.get(id=1)
+    m = one.many_set.all()     #类名小写                  一.多_set.查询名称()
+    for i in m:
+        print(i.m_name)
+
+
+
+    # 查询one[他关联的many的m_name包含m]
+    o = One.objects.filter(many__m_name__contains='k')     多__属性__查询条件=XXX
+
+
+     # 查询多表---其中单表的  id 为 4
+    m = Many.objects.filter(fk__id=1)    #关联属性名__一属性__条件=XXX
+
+
+    通过模型类查询 查哪个类 就用那个模型来查询  进行关联查询 如果模型中有外键(外键__属性__条件=xxx)  没有外键(类__属性__条件=xxx)
+    一查多: 一.多_set.查询名称()/...filter/..(多__属性__查询条件=XXX)
+    多查一: .../filter/...(外键名称__一属性__条件=XXX)
+
+
+    插入,更新和删除 save/delete  查出来之后进行操作
+
+
+------------------ models.Manager -----------------
+django会为每个对象生成一个 这样的管理器   类.objects 得到
+自定义模型管理器   eg:对查询结果进行条件过滤   eg2:增加额外的方法 [增删改查...] 例如:create方法 参数传递 dict类型
+
+补充:模型管理类[类.objects].model 得到 所在的类
+
+
+----------------- 元选项 ---------------------
+让模型类的名字不依赖与应用的名字
+对已经生成的 表 也起作用
+    class Meta:
+        db_table = 'Person_2'
+

@@ -1,0 +1,136 @@
+
+{% extends 'df_goods/base.html'%}
+{% block head %}
+<script>
+
+ $(function(){
+/* 计算价格数量函数*/
+   function calculateTotal(){
+     /* 小计价格*/
+     var sumTotal = 0;
+     var countGood = 0;
+
+		//获取数量
+       count = $('.num_show').val();
+		//获取单价
+       price = {{ g.gprice }};
+		//小计
+       total01 = parseInt(count) * parseFloat(price);
+       $('#gtotal').text(total01.toFixed(2)+'元');
+
+   };
+   function kucun() {
+       kunn = $('#kucun').text()
+       console.log(kunn)
+       if (kunn == 0){
+            $('div#genghuan').replaceWith("<div style='height: 60px;width: 198px;color: red;font-size: 28px;margin-top: 30px;'>没有库存了</div>")
+       }
+   };
+   kucun();
+   calculateTotal();
+     {# 购买页面 #}
+   $('#buy').click(function () {
+       txt = $('.num_show').val();
+       window.location.href='/cart/add{{ g.id }}_'+txt+'/'
+   })
+     {# 加入购物车  ajax #}
+   $('.add_cart').click(function () {
+       txt = $('.num_show').val();
+       url = '/cart/add{{ g.id }}_'+txt+'/';
+       $.get(url,function (data) {
+            $('#show_count').text(data.count)
+           console.log(data.count)
+       })
+   })
+
+   /* 新增*/
+   $('.add').click(function(){
+     txt = $('.num_show').val();
+     if (txt<100){
+       txt=(parseFloat(txt)+1);
+       $('.num_show').val(txt)
+     };
+     goodid = {{ g.id }};
+     count = $(this).val();
+     url = '/cart/edit'+goodid+'_'+count+'/';
+
+     	calculateTotal();
+   });
+
+   /* 减少*/
+   $('.minus').click(function(){
+    txt = $('.num_show').val();
+     if (txt>1){
+       txt=(parseFloat(txt)-1);
+       $('.num_show').val(txt)
+     };
+     goodid = {{ g.id }};
+     count = $(this).val();
+
+     calculateTotal();
+   });
+ })
+</script>
+{% endblock head%}
+
+
+{% block detail %}
+	<div class="goods_detail_con clearfix">
+		<div class="goods_detail_pic fl"><img src="/static/{{g.gpic}}"></div>
+
+		<div class="goods_detail_list fr">
+			<h3>{{g.gtitle}}</h3>
+			<p>{{g.gjianjie}}</p>
+			<div class="prize_bar">
+				<span class="show_pirze">¥<em id="gprice">{{g.gprice}}</em></span>
+				<span class="show_unit">单  位：{{g.gunit}}</span>
+			</div>
+			<div id="genghuan">
+                <div class="goods_num clearfix">
+                    <div class="num_name fl">数 量：</div>
+                    <div class="num_add fl">
+                        <input type="text" class="num_show fl" value="1" id="num_show">
+                        <a href="javascript:;" class="add fr" id="add">+</a>
+                        <a href="javascript:;" class="minus fr" id="minus">-</a>
+                    </div>
+                    <div style="margin-left: 350px;line-height: 53px;overflow: hidden;">
+                        <div style="width: 77px;height: 52px; float: left">库 存：</div>
+                        <div style="border: 1px solid #dddddd;width: 77px;height: 52px;text-align: center;line-height: 53px;
+                                overflow: hidden;font-size: 20px;" id="kucun">{{ g.gkucun }}</div>
+
+                    </div>
+                </div>
+                <div class="total">总价：<em id="gtotal"></em></div>
+                <div class="operate_btn">
+                    {% if request.session.user_name|default:'' != '' %}
+                        <a href="javascript:;" class="buy_btn" id="buy">立即购买</a>
+                    {% else %}
+                        <a href="/user/login/" class="buy_btn" id="buy">立即购买</a>
+                    {% endif %}
+                    {% if request.session.user_name|default:'' != '' %}
+                        <a href="javascript:;" class="add_cart" id="add_cart">加入购物车</a>
+                    {% else %}
+                        <a href="/user/login/" class="add_cart" id="add_cart">加入购物车</a>
+                    {% endif %}
+                </div>
+            </div>
+		</div>
+	</div>
+{% endblock detail%}
+
+{% block list %}
+		<div class="r_wrap fr clearfix">
+			<ul class="detail_tab clearfix">
+				<li class="active">商品介绍</li>
+				<li>评论</li>
+			</ul>
+
+			<div class="tab_content">
+				<dl>
+					<dt>商品详情：</dt>
+					<dd>{{g.gcontent|safe}}</dd>
+				</dl>
+			</div>
+
+		</div>
+{% endblock list %}
